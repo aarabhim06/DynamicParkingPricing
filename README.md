@@ -37,6 +37,7 @@ graph TD
 ---
 ## Model 1: Baseline Linear Pricing Model
 **Objective:**
+
 This is a simple pricing model where the price changes linearly with the occupancy of the parking lot.
 
 **How it works:**
@@ -52,7 +53,7 @@ This ensures the price increases as demand (occupancy) increases, giving a simpl
 - Applied a daily tumbling window aggregation for computing average occupancy and capacity per parking lot.
 - Plotted the prices over time for each parking lot using Bokeh to visualize how prices fluctuate with demand.
 
-**Sample Plot**
+**Sample Plot:**
 
 ![Model 1_Real-Time Dynamic Pricing](https://github.com/user-attachments/assets/7589eaf9-76f8-450c-9d5c-25fe554f1bba)
 
@@ -60,15 +61,36 @@ This ensures the price increases as demand (occupancy) increases, giving a simpl
 
 ## Model 2: Demand-Based Pricing Model
 **Objective:**
-To incorporate more factors affecting demand beyond just occupancy, such as queue length, traffic conditions, special days, and vehicle types, for a refined pricing strategy.
+
+To incorporate more factors affecting demand beyond just occupancy, such as queue length, traffic conditions, special days, and vehicle types, for a refined pricing strategy. A composite demand score is calculated using a weighted sum of key features.
 
 **How it works:**
+
+Let:
+
+```OccupancyRate = Occupancy / Capacity```
+
 The price depends on a composite demand function formulated as:
 
+```Demand = α × OccupancyRate + β × QueueLength - γ × Traffic + δ × IsSpecialDay + ε × VehicleTypeWeight```
 
+where:
 - Parameters (𝛼, 𝛽, 𝛾, 𝛿, 𝜖) are weights tuned based on assumed influence.
 - The raw demand is normalized with a sigmoid-like function to avoid extreme prices and maintain smooth pricing behavior.
-- Final price is clipped within a reasonable range (0.5 to 2 times the base price).
+  
+Then the real-time price is calculated as:
+
+```Price_t = BasePrice × (1 + λ × NormalizedDemand)```
+
+Finally, to avoid erratic price fluctuations, the price is bounded:
+```
+if Price_t < 0.5 × BasePrice:
+    Price_t = 0.5 × BasePrice
+elif Price_t > 2 × BasePrice:
+    Price_t = 2 × BasePrice
+```
+
+Final price is clipped within a reasonable range (0.5 to 2 times the base price).
 
 **Implementation Notes:**
 - Added additional features into the streaming dataset (queue length, traffic conditions, etc.).
@@ -83,6 +105,7 @@ The price depends on a composite demand function formulated as:
 ---
 ## Visual Comparison: Model 1 vs Model 2
 **Objective:**
+
 Compare baseline linear pricing with demand-based pricing side by side.
 
 **How it works:**
@@ -97,6 +120,7 @@ Compare baseline linear pricing with demand-based pricing side by side.
 
 ## Model 3: Competitive Pricing Adjustment
 **Objective:**
+
 To adjust prices dynamically by considering competitor prices within a radius of 0.5 km for each parking lot.
 
 **How it works:**
