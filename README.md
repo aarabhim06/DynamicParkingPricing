@@ -14,11 +14,14 @@ The project aims to simulate real-time dynamic pricing for urban parking spaces 
 
 ## Tech Stack
 
-- Python (core language)
-- Pandas & Numpy (feature engineering and math)
-- Pathway (real-time stream ingestion and transformation)
-- Bokeh & Panel (live plotting and web visualization)
-- Google Colab (development and testing environment)
+- **Python** (core programming language for data processing and modeling)
+- **Pandas & NumPy** (data cleaning, feature engineering, and mathematical computations)
+- **Pathway** (real-time streaming data ingestion, transformation, and windowed aggregation)
+- **Bokeh & Panel** (interactive, live plotting and web visualization dashboards)
+- **Google Colab** (cloud-based notebook environment for development and collaboration)
+- **Scipy KDTree** (efficient spatial indexing for geographic competitor queries)
+- **Haversine formula** (calculating accurate distances between latitude-longitude coordinates)
+- **Git & GitHub** (version control and collaborative source code management)
 
 ---
 
@@ -26,14 +29,18 @@ The project aims to simulate real-time dynamic pricing for urban parking spaces 
 
 ```mermaid
 graph TD
-  A[dataset.csv] --> B[Pathway Stream Replay]
+  A[Raw Dataset → dataset.csv] --> B[Pathway Stream Replay]
   B --> C[Feature Engineering]
-  C --> D1[Model 1: Linear Pricing]
-  C --> D2[Model 2: Demand-Based Pricing]
-  C --> D3[Model 3: Competitive Adjustment]
-  D1 --> E[Bokeh Visualization]
-  D2 --> E
+  C --> D[Occupancy, Demand Score, Competitor Mapping]
+  D --> E1[Model 1: Linear Pricing]
+  D --> E2[Model 2: Demand-Based Pricing]
+  D --> E3[Model 3: Competitive Adjustment]
+  E1 --> F[Bokeh Visualization]
+  E2 --> F
+  E3 --> F
+  F --> G[Dashboard / Reports] 
 ```
+
 ---
 ## Model 1: Baseline Linear Pricing Model
 **Objective:**
@@ -43,9 +50,15 @@ This is a simple pricing model where the price changes linearly with the occupan
 **How it works:**
 - We use the occupancy data and capacity for each parking lot, streamed in real-time using Pathway.
 - The price for each lot is calculated as:
+
 ```Price = BasePrice + 𝛼 × (Occupancy / Capacity)```
 ​
-where BasePrice = 10 and α is a scaling factor (2 in our implementation).
+
+where:
+
+- BasePrice = 10
+- α is a scaling factor (2 in our implementation).
+
 This ensures the price increases as demand (occupancy) increases, giving a simple but effective dynamic pricing signal.
 
 **Implementation Notes:**
@@ -114,7 +127,7 @@ Compare baseline linear pricing with demand-based pricing side by side.
 
 **Sample plot:**
 
-![Model 1 vs Model 2_ Price Comparison](https://github.com/user-attachments/assets/f52fdf3d-5500-443e-b39a-31fd7930d917)
+![Model 1 vs Model 2](https://github.com/user-attachments/assets/7d9e5164-19ac-4114-8b8c-5bb7948b92a0)
 
 ---
 
@@ -123,15 +136,74 @@ Compare baseline linear pricing with demand-based pricing side by side.
 
 To adjust prices dynamically by considering competitor prices within a radius of 0.5 km for each parking lot.
 
-**How it works:**
-- Computed nearby competitors for each parking lot using the Haversine formula and KDTree for efficient spatial queries.
-- Compared own price from Model 2 with average competitor prices.
-- If competitors price lower → reduce own price slightly to stay competitive.
-- If competitors price higher → increase own price slightly.
-- This maintains competitive positioning and market-driven pricing.
+**How it works:**  
+- For each parking lot, we identify nearby competitors within 0.5 km using the Haversine distance formula combined with a KDTree spatial index for efficient lookup.
+- We start with the demand-based price from Model 2 as the base price.
+- Then, we compare the base price with the average competitor prices in the vicinity.
+- The final price is adjusted by a small delta (∆) based on the comparison:
+  
+`Final Price = Price_Model2 + Δ`
+
+where
+
+```
+Δ = {
+    -0.5  if avg_competitor_price < own_price
+    +0.3  if avg_competitor_price > own_price
+    0     otherwise
+}
+```
 
 **Implementation Notes:**
 - Precomputed competitor mapping based on geographic proximity.
 - Used Pathway's pw.apply() to adjust Model 2 prices based on competitor prices.
 - Visualized adjusted final prices with Bokeh.
+
+**Sample plot:**
+
+![Model 3_ Competitve Geo-Based Pricing](https://github.com/user-attachments/assets/59fdb9b6-a9c7-4c22-a89c-ac130ef33feb)
+
+---
+
+## Merged Model Comparison: Pricing Behavior Across Models
+
+**Objective:**  
+
+To provide a unified visualization comparing pricing from all three models on the same plot, enabling direct comparison of their pricing dynamics over time.
+
+**How it works:**  
+
+- Prices from Model 1, Model 2, and Model 3 are joined based on timestamps and parking lot IDs.
+- Each model’s prices are plotted as separate lines with distinct colors.
+- The visualization highlights differences in pricing strategies and how competitive adjustments affect final prices.
+
+**Pricing Behavior Explanation:**
+
+- **Model 1** produces the baseline prices, generally the lowest, as it only considers occupancy linearly.
+- **Model 2** increases prices more aggressively by incorporating multiple demand factors, resulting in higher price peaks.
+- **Model 3** adjusts Model 2 prices considering competitor pricing, nudging prices slightly up or down to stay competitive, typically positioning Model 3 prices between Models 1 and 2.
+
+This combined view allows stakeholders to understand the impact of each model's complexity on price optimization.
+
+**Sample plot:**
+
+![All Models_ Dynamic Price Comparison](https://github.com/user-attachments/assets/3fc4143c-a8f3-43a1-8e98-21a3001f9bf1)
+
+---
+
+## Limitations & Future Work
+
+- The models assume static parameter tuning and simplified demand factors.
+- Real-world competitor prices can be more volatile; live integration is needed.
+- More granular temporal windows (e.g., hourly) could improve responsiveness.
+- Additional features like weather, events, or historical trends could be incorporated.
+- A user-facing dashboard with filtering options would improve usability.
+
+---
+
+## Conclusion
+
+This project demonstrates a progressive approach to real-time dynamic pricing for urban parking using streaming data and behavioral economics principles. The three models showcase increasing sophistication, from linear pricing to demand-aware and finally competitor-aware pricing. Visualization using Bokeh provides intuitive insights into pricing dynamics, paving the way for smarter urban mobility solutions.
+
+---
 
